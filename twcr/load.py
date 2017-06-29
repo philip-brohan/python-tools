@@ -11,54 +11,56 @@
 # GNU Lesser General Public License for more details.
 #
 """
-The functions in this module provide the main way to load and/or save
+The functions in this module provide the main way to load
 20CR data.
 """
 
 import os
-import datetime
 import iris
 import iris.time
 
+# Eliminate incomprehensible warning message
+iris.FUTURE.netcdf_promote='True'
+
 def get_data_dir(version):
     """Return the root directory containing 20CR netCDF files"""
-    g=sprintf("%s/20CR/version_%s/",os.environ('SCRATCH'),version)
-    if os.path.isdir(sprintf(g)):
+    g="%s/20CR/version_%s/" % (os.environ['SCRATCH'],version)
+    if os.path.isdir(g):
         return g
-    g=sprintf("/project/projectdirs/m958/netCDF.data/20CR_v%s/",
-               version)
-    if os.path.isdir(sprintf(g)):
+    g="/project/projectdirs/m958/netCDF.data/20CR_v%s/" % version
+    if os.path.isdir(g):
         return g
-    raise IOError(sprintf("No data found for version %s",version))
+    raise IOError("No data found for version %s" % version)
 
 def get_data_file_name(variable,year,month,day,hour,version,
                        type='ensemble'):
     """Return the name of the file containing data for the
        requested variabe, at the specified time, from the
        20CR version."""
-    base.dir=get_data_dir(version)
+    base_dir=get_data_dir(version)
     name=None
     if type=='normal':
-        name=sprintf("%s/hourly/normals/%s.nc",base.dir,variable)
+        name="%s/hourly/normals/%s.nc" % (base_dir,variable)
     if type=='standard.deviation':
-        name<-sprintf("%s/hourly/standard.deviations/%s.nc",
-                      base.dir,variable)
-    if type=='ensemble':
-        if version[0]==4: # V3 data is by month
-            name=sprintf("%s/hourly/%04d/%02d/%s.nc",base.dir,
-                          year,month,variable)
+        name="%s/hourly/standard.deviations/%s.nc" % (base_dir,
+                                                      variable)
+    if type == 'ensemble':
+        if version[0]=='4': # V3 data is by month
+            name="%s/hourly/%04d/%02d/%s.nc" % (base_dir,
+                                                year,month,
+                                                variable)
         else:              # V2 data is by year
-            name=sprintf("%s/ensembles/hourly/%04d/%s.nc",base.dir,
-                          year,variable)
+            name="%s/ensembles/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,
+                                                     variable)
     if name==None:
-       raise IOError(sprintf("Unsupported type %s",type))
+       raise IOError("Unsupported type %s" % type)
     return name
 
 def is_in_file(variable,version,hour):
-    """Is the variable avaialble for this time?
-
+    """Is the variable available for this time?
        Or will it have to be interpolated?"""
-    if(version[0]==4 and hour%3==0):
+    if(version[0]=='4' and hour%3==0):
         return 'True'
     if hour%6==0:
         return 'True'
@@ -70,14 +72,19 @@ def get_slice_at_hour(variable,year,month,day,hour,version,
         raise ValueError("Invalid hour - data not in file")
     file_name=get_data_file_name(variable,year,month,day,hour,
                                  version,type)
+    if type == 'normal' or type == 'standard.deviation':
+        year=1981
+        if month==2 and day==29:
+            day=28
     time_constraint=iris.Constraint(time=iris.time.PartialDateTime(
                                    year=year,
                                    month=month,
                                    day=day,
                                    hour=hour))
     try:
-        hslice=iris.load_cube(file_name,
-                             time.constraint)
+        with iris.FUTURE.context(cell_datetime_objects=True):
+            hslice=iris.load_cube(file_name,
+                                  time_constraint)
     except iris.exceptions.ConstraintMismatchError:
        print("Data not available")
     return hslice
