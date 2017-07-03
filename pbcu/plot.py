@@ -22,10 +22,10 @@ import matplotlib.pyplot as plt
 import iris
 import iris.quickplot as qplt
 
-def pplot(cb,n_levels=25):
+def pplot(cb):
     
     # Draw the contour.
-    qplt.contourf(cb, n_levels)
+    qplt.pcolormesh(cb)
 
     # Add coastlines.
     plt.gca().coastlines()

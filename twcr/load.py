@@ -18,6 +18,8 @@ The functions in this module provide the main way to load
 import os
 import iris
 import iris.time
+import datetime
+import numpy
 
 # Eliminate incomprehensible warning message
 iris.FUTURE.netcdf_promote='True'
@@ -66,8 +68,30 @@ def is_in_file(variable,version,hour):
         return 'True'
     return 'False'
 
-def get_slice_at_hour(variable,year,month,day,hour,version,
-                      type='ensemble'):
+def get_previous_field_time(variable,year,month,day,hour,version):
+    """Get the latest time, before the given time,
+                     for which there is saved data"""
+    if version[0]=='4':
+        return {'year':year,'month':month,'day':day,'hour':int(hour/3)*3}
+    return {'year':year,'month':month,'day':day,'hour':int(hour/6)*6}
+
+def get_next_field_time(variable,year,month,day,hour,version):
+    """Get the earliest time, after the given time,
+                     for which there is saved data"""
+    dr = {'year':year,'month':month,'day':day,'hour':int(hour/6)*6+6}
+    if version[0]=='4':
+        dr = {'year':year,'month':month,'day':day,'hour':int(hour/3)*3+3}
+    if dr['hour']>=24:
+        d_next= ( datetime.date(dr['year'],dr['month'],dr['day']) 
+                 + datetime.timedelta(1) )
+        dr = {'year':d1.year,'month':d1.month,'day':d1.day,
+              'hour':dr['hour']-24}
+    return dr
+
+def get_slice_at_hour_at_timestep(variable,year,month,day,hour,version,
+                                  type='ensemble'):
+    """Get the cube with the data, given that the specified time
+       matches a data timestep."""
     if not is_in_file(variable,version,hour):
         raise ValueError("Invalid hour - data not in file")
     file_name=get_data_file_name(variable,year,month,day,hour,
@@ -85,6 +109,46 @@ def get_slice_at_hour(variable,year,month,day,hour,version,
         with iris.FUTURE.context(cell_datetime_objects=True):
             hslice=iris.load_cube(file_name,
                                   time_constraint)
+    # This isn't the right error to catch
     except iris.exceptions.ConstraintMismatchError:
        print("Data not available")
     return hslice
+
+def get_slice_at_hour(variable,year,month,day,hour,version,
+                      type='ensemble'):
+    """Get the cube with the data, interpolating between timesteps
+       if necessary."""
+    if is_in_file(variable,version,hour):
+        return(get_slice_at_hour_at_timestep(variable,year,
+                                             month,day,
+                                             hour,version,type))
+    previous_step=get_previous_field_time(variable,year,month,
+                                          day,hour,version)
+    next_step=get_next_field_time(variable,year,month,
+                                  day,hour,version)
+    dt_current=datetime.datetime(year,month,day,int(hour),int((hour%1)*60))
+    dt_previous=datetime.datetime(previous_step['year'],
+                                  previous_step['month'],
+                                  previous_step['day'],
+                                  previous_step['hour'])
+    dt_next=datetime.datetime(next_step['year'],
+                              next_step['month'],
+                              next_step['day'],
+                              next_step['hour'])
+    weight=((dt_current-dt_previous).total_seconds()
+            /(dt_next-dt_previous).total_seconds())
+    s_previous=get_slice_at_hour_at_timestep(variable,
+                                             previous_step['year'],
+                                             previous_step['month'],
+                                             previous_step['day'],
+                                             previous_step['hour'],
+                                             version,type)
+    s_next=get_slice_at_hour_at_timestep(variable,
+                                         next_step['year'],
+                                         next_step['month'],
+                                         next_step['day'],
+                                         next_step['hour'],
+                                         version,type)
+    s_next.data=s_next.data*weight+s_previous.data*(1-weight)
+    return s_next
+
