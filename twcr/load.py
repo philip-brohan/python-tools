@@ -16,10 +16,12 @@ The functions in this module provide the main way to load
 """
 
 import os
+import os.path
 import iris
 import iris.time
 import datetime
-import numpy
+import numpy as np
+import pandas
 
 # Eliminate incomprehensible warning message
 iris.FUTURE.netcdf_promote='True'
@@ -152,3 +154,78 @@ def get_slice_at_hour(variable,year,month,day,hour,version,
     s_next.data=s_next.data*weight+s_previous.data*(1-weight)
     return s_next
 
+def get_obs_1file(year,month,day,hour,version):
+    """Retrieve all the observations for an individual assimilation run"""
+    if(version[0]=='4'):
+      return get_obs_1file_v3(year,month,day,hour,version=version)
+    else:
+      return get_obs_1file_v2(year,month,day,hour,version=version)
+
+def get_obs_1file_v2(year,month,day,hour,version):
+    """Retrieve all the observations for an individual assimilation run
+     Version for v2 format data."""
+    base_dir=get_data_dir(version)
+    of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
+            year,year,month,day,hour)
+    if not os.path.isfile(of_name):
+        raise IOError("No obs file for given version and date")
+
+    o=pandas.read_fwf(of_name,
+                       colspecs=[(1,19),(21,23),(25,25),(27,33),(35,40),(42,46),(48,52),
+                                 (54,59),(61,67),(69,75),(77,83),(85,94),(96,100),
+                                 (102,106),(108,108),(110,110),(112,112),(114,114),
+                                 (116,116),(118,127),(129,138),(140,149),(151,160),
+                                 (162,191),(193,206)],          
+                       header=None,
+                       encoding="ISO-8859-1",
+                       names=['UID','NCEP.Type','Variable','Longitude','Latitude',
+                               'Elevation','Model.Elevation','Time.Offset',
+                               'Pressure.after.bias.correction',
+                               'Pressure.after.vertical.interpolation',
+                               'SLP','Bias',
+                               'Error.in.surface.pressure',
+                               'Error.in.vertically.interpolated.pressure',
+                               'Assimilation.indicator',
+                               'Usability.check',
+                               'QC.flag',
+                               'Background.check',
+                               'Buddy.check',
+                               'Mean.first.guess.pressure.difference',
+                               'First.guess.pressure.spread',
+                               'Mean.analysis.pressure.difference',
+                               'Analysis.pressure.spread',
+                               'Name','ID'],
+                       converters={'UID': str, 'NCEP.Type': int, 'Variable' : str,
+                                   'Longitude': float,'Latitude': float,'Elevation': int,
+                                   'Model.Elevation': int, 'Time.Offset': float,
+                                   'Pressure.after.bias.correction': float,
+                                   'Pressure.after.vertical.interpolation': float,
+                                   'SLP': float,'Bias': float,
+                                   'Error.in.surface.pressure': float,
+                                   'Error.in.vertically.interpolated.pressure': float,
+                                   'Assimilation.indicator': int,
+                                   'Usability.check': int, 'QC.flag': int,
+                                   'Background.check': int, 'Buddy.check': int,
+                                   'Mean.first.guess.pressure.difference': float,
+                                   'First.guess.pressure.spread': float,
+                                   'Mean.analysis.pressure.difference': float,
+                                   'Analysis.pressure.spread': float,
+                                   'Name': str, 'ID': str},
+                       na_values=['NA','*','***','*****','*******','**********',
+                                          '-99','9999','-999','9999.99','10000.0',
+                                          '-9.99','999999999999999999999999999999',
+                                          '999999999999','9'],
+                       comment=None)
+    return(o)
+
+def get_obs_1file_v3(year,month,day,hour,version):
+    """Retrieve all the observations for an individual assimilation run
+     Version for v3 format data."""
+    base_dir=get_data_dir(version)
+    of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
+            year,year,month,day,hour)
+    if not os.path.isfile(of_name):
+        raise IOError("No obs file for given version and date")
+
+    o=pandas.read_fwf(of_name,
+ 
