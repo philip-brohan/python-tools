@@ -24,18 +24,13 @@ import subprocess
 def 
 
 def fetch_data_for_month(variable,year,month,
-                       version,
-                       ensemble=True,
-                       mean=False,
-                       spread=False) {
+                         version,type='ensemble'):
  """Version 3 specific - for version 2 use fetch_data_for_year."""
     variable=variable.lower()
-    local_file=get_local_file_name(variable,year,month,version,
-                                   ensemble,mean,spread)
+    local_file=get_data_file_name(variable,year,month,version,type)
     if os.path.isfile(local_file):
         return
-    remote_file=get_remote_file_name(variable,year,month,version,
-                                   ensemble,mean,spread)
+    remote_file=get_remote_file_name(variable,year,month,version,type)
     cmd="scp %s %s" % (remote.file,local_file)
     scp_retvalue=subprocess.call(cmd)
     if scp_retvalue!=0:

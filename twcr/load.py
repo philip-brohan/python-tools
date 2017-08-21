@@ -222,10 +222,42 @@ def get_obs_1file_v3(year,month,day,hour,version):
     """Retrieve all the observations for an individual assimilation run
      Version for v3 format data."""
     base_dir=get_data_dir(version)
-    of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
-            year,year,month,day,hour)
+    of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
+            year,month,year,month,day,hour)
     if not os.path.isfile(of_name):
         raise IOError("No obs file for given version and date")
 
     o=pandas.read_fwf(of_name,
+                       colspecs=[(1,19),(21,23),(25,25),(27,33),(35,40),(42,46),
+                                 (48,53),(55,62),(64,71),(73,78),(80,109)],
+                       usecols=[0,1,2,3,4,5,6,7,8,9,10],
+                       header=None,
+                       encoding="ISO-8859-1",
+                       names=['UID','NCEP.Type','Variable','Longitude','Latitude',
+                              'Un1','Un2','Un3','Un4','Un5','Name'],
+                       converters={'UID': str, 'NCEP.Type': int, 'Variable' : str,
+                                   'Longitude': float, 'Latitude': float, 'Un1': int,
+                                   'Un2': float, 'Un3': float, 'Un4': float,
+                                   'Un5': float, 'Name': str},
+                       na_values=['NA','*','***','*****','*******','**********',
+                                          '-99','9999','-999','9999.99','10000.0',
+                                          '-9.99','999999999999999999999999999999',
+                                          '999999999999','9'],
+                       comment=None)
+    return(o)
  
+def get_obs(start,end,version):
+    """Retrieve all the observations between start and end"""
+    base_dir=get_data_dir(version)
+    result=None
+    ct=start
+    while(ct<end):
+        of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" : (base.dir,
+                ct.year,ct.year,ct.month,ct.day,ct,hour)
+        if(version[0]=='4'):
+           of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" : (base.dir,
+                ct.year,ct.month,ct.year,ct.month,ct.day,ct,hour)
+        if not os.path.isfile(of_name):
+           continue
+        o=get_obs_1file(ct.year,ct.month,ct.day,ct,hour,version)
+        odates=o.apply(
