@@ -171,11 +171,11 @@ def get_obs_1file_v2(year,month,day,hour,version):
         raise IOError("No obs file for given version and date")
 
     o=pandas.read_fwf(of_name,
-                       colspecs=[(1,19),(21,23),(25,25),(27,33),(35,40),(42,46),(48,52),
-                                 (54,59),(61,67),(69,75),(77,83),(85,94),(96,100),
-                                 (102,106),(108,108),(110,110),(112,112),(114,114),
-                                 (116,116),(118,127),(129,138),(140,149),(151,160),
-                                 (162,191),(193,206)],          
+                       colspecs=[(0,19),(20,23),(24,25),(26,33),(34,40),(41,46),(47,52),
+                                 (53,61),(60,67),(68,75),(76,83),(84,94),(95,100),
+                                 (101,106),(107,108),(109,110),(111,112),(113,114),
+                                 (115,116),(117,127),(128,138),(139,149),(150,160),
+                                 (161,191),(192,206)],          
                        header=None,
                        encoding="ISO-8859-1",
                        names=['UID','NCEP.Type','Variable','Longitude','Latitude',
@@ -228,8 +228,8 @@ def get_obs_1file_v3(year,month,day,hour,version):
         raise IOError("No obs file for given version and date")
 
     o=pandas.read_fwf(of_name,
-                       colspecs=[(1,19),(21,23),(25,25),(27,33),(35,40),(42,46),
-                                 (48,53),(55,62),(64,71),(73,78),(80,109)],
+                       colspecs=[(0,19),(20,23),(24,25),(26,33),(34,40),(41,46),
+                                 (47,53),(55,62),(63,71),(72,77),(78,134)],
                        usecols=[0,1,2,3,4,5,6,7,8,9,10],
                        header=None,
                        encoding="ISO-8859-1",
@@ -252,12 +252,22 @@ def get_obs(start,end,version):
     result=None
     ct=start
     while(ct<end):
-        of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" : (base.dir,
-                ct.year,ct.year,ct.month,ct.day,ct,hour)
+        print(ct)
+        of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
+                ct.year,ct.year,ct.month,ct.day,ct.hour)
         if(version[0]=='4'):
-           of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" : (base.dir,
-                ct.year,ct.month,ct.year,ct.month,ct.day,ct,hour)
+           of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
+                ct.year,ct.month,ct.year,ct.month,ct.day,ct.hour)
         if not os.path.isfile(of_name):
+           ct=ct+datetime.timedelta(hours=1)
            continue
-        o=get_obs_1file(ct.year,ct.month,ct.day,ct,hour,version)
-        odates=o.apply(
+        print('retrieving')
+        o=get_obs_1file(ct.year,ct.month,ct.day,ct.hour,version)
+        dtm=pandas.to_datetime(o.UID.str.slice(0,10),format="%Y%m%d%H")
+        o2=o[(dtm>=start) & (dtm<end)]
+        if(result is None):
+            result=o2
+        else:
+            result=pandas.concat([result,o2])
+        ct=ct+datetime.timedelta(hours=1)
+    return(result)
