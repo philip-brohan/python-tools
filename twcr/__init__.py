@@ -16,3 +16,4 @@ A package for handling data from the 20th Century Reanalysis.
 """
 
 from load import *
+from fetch import *

@@ -41,6 +41,45 @@ def get_data_file_name(variable,year,month,day,hour,version,
     """Return the name of the file containing data for the
        requested variabe, at the specified time, from the
        20CR version."""
+    if(version[0]=='4'):
+      return get_data_file_name_v3(variable,year,month,day,hour,
+                                   version,type)
+    else:
+      return get_data_file_name_v2(variable,year,month,day,hour,
+                                   version,type)
+
+def get_data_file_name_v3(variable,year,month,day,hour,version,
+                          type='ensemble'):
+    """Return the name of the file containing data for the
+       requested variabe, at the specified time, from the
+       20CR version. (Version 3+)"""
+    base_dir=get_data_dir(version)
+    name=None
+    if type=='normal':
+        name="%s/normals/hourly/%02d/%s.nc" % (base_dir,
+                                         month,variable)
+    if type=='standard.deviation':
+        name="%s/standard.deviations/hourly/%02d/%s.nc" % (base_dir,
+                                                  month,variable)
+    if type == 'ensemble':
+        name="%s/hourly/%04d/%02d/%s.nc" % (base_dir,
+                                            year,month,
+                                            variable)
+    if variable == 'observations':
+        if hour%6!=0:
+            raise StandardError("Observation files only available every 6 hours")
+        name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
+            year,month,year,month,day,hour)
+
+    if name==None:
+       raise IOError("Unsupported type %s" % type)
+    return name
+
+def get_data_file_name_v2(variable,year,month,day,hour,version,
+                       type='ensemble'):
+    """Return the name of the file containing data for the
+       requested variabe, at the specified time, from the
+       20CR version. (Version 2 series)"""
     base_dir=get_data_dir(version)
     name=None
     if type=='normal':
@@ -49,14 +88,13 @@ def get_data_file_name(variable,year,month,day,hour,version,
         name="%s/hourly/standard.deviations/%s.nc" % (base_dir,
                                                       variable)
     if type == 'ensemble':
-        if version[0]=='4': # V3 data is by month
-            name="%s/hourly/%04d/%02d/%s.nc" % (base_dir,
-                                                year,month,
-                                                variable)
-        else:              # V2 data is by year
             name="%s/ensembles/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,
-                                                     variable)
+                                                     year,variable)
+    if variable == 'observations':
+        if hour%6!=0:
+            raise StandardError("Observation files only available every 6 hours")
+        name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
+            year,year,month,day,hour)
     if name==None:
        raise IOError("Unsupported type %s" % type)
     return name
@@ -165,8 +203,7 @@ def get_obs_1file_v2(year,month,day,hour,version):
     """Retrieve all the observations for an individual assimilation run
      Version for v2 format data."""
     base_dir=get_data_dir(version)
-    of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
-            year,year,month,day,hour)
+    of_name=get_data_file_name('observations',year,month,day,hour,version)
     if not os.path.isfile(of_name):
         raise IOError("No obs file for given version and date")
 
@@ -221,9 +258,7 @@ def get_obs_1file_v2(year,month,day,hour,version):
 def get_obs_1file_v3(year,month,day,hour,version):
     """Retrieve all the observations for an individual assimilation run
      Version for v3 format data."""
-    base_dir=get_data_dir(version)
-    of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
-            year,month,year,month,day,hour)
+    of_name=get_data_file_name('observations',year,month,day,hour,version)
     if not os.path.isfile(of_name):
         raise IOError("No obs file for given version and date")
 
@@ -252,16 +287,9 @@ def get_obs(start,end,version):
     result=None
     ct=start
     while(ct<end):
-        print(ct)
-        of_name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
-                ct.year,ct.year,ct.month,ct.day,ct.hour)
-        if(version[0]=='4'):
-           of_name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
-                ct.year,ct.month,ct.year,ct.month,ct.day,ct.hour)
-        if not os.path.isfile(of_name):
+        if(int(ct.hour)%6!=0):
            ct=ct+datetime.timedelta(hours=1)
-           continue
-        print('retrieving')
+           continue 
         o=get_obs_1file(ct.year,ct.month,ct.day,ct.hour,version)
         dtm=pandas.to_datetime(o.UID.str.slice(0,10),format="%Y%m%d%H")
         o2=o[(dtm>=start) & (dtm<end)]
