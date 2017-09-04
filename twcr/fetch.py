@@ -180,7 +180,7 @@ def fetch_data_for_month(variable,year,month,
     if(variable=='observations'):
         # Multiple files - use rsync
         local_file=os.path.dirname(local_file)
-        cmd="rsync -Lr %s %s" % (remote_file,local_file)
+        cmd="rsync -Lr %s/ %s" % (remote_file,local_file)
         #print(cmd)
         scp_retvalue=subprocess.call(cmd,shell=True) # Why need shell=True?
         if scp_retvalue==3:
