@@ -65,6 +65,15 @@ def get_data_file_name_v3(variable,year,month,day,hour,version,
         name="%s/hourly/%04d/%02d/%s.nc" % (base_dir,
                                             year,month,
                                             variable)
+    if type == 'first.guess':
+            name="%s/first.guess/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
+    if type == 'mean':
+            name="%s/mean/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
+    if type == 'spread':
+            name="%s/spread/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
     if variable == 'observations':
         if hour%6!=0:
             raise StandardError("Observation files only available every 6 hours")
@@ -89,6 +98,15 @@ def get_data_file_name_v2(variable,year,month,day,hour,version,
                                                       variable)
     if type == 'ensemble':
             name="%s/ensembles/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
+    if type == 'first.guess':
+            name="%s/first.guess/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
+    if type == 'mean':
+            name="%s/mean/hourly/%04d/%s.nc" % (base_dir,
+                                                     year,variable)
+    if type == 'spread':
+            name="%s/spread/hourly/%04d/%s.nc" % (base_dir,
                                                      year,variable)
     if variable == 'observations':
         if hour%6!=0:
