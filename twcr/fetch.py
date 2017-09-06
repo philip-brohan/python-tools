@@ -67,7 +67,13 @@ def get_remote_file_name_m958(variable,year,month,version,type):
         remote_file="%s/hourly/%s/%s.%04d.spread.nc" % (remote_dir,
                      variable,variable,year)
 
-    if (type=='first.guess'):
+    if (type=='first.guess.mean'):
+        remote_dir="pbrohan@dtn02.nersc.gov:/project/projectdirs/"+\
+                   "m958/netCDF.data/20CR_v%s/" % version
+        remote_file="%s/first.guess.hourly/%s/%s.%04d.nc" % (remote_dir,
+                     variable,variable,year)
+
+    if (type=='first.guess.spread'):
         remote_dir="pbrohan@dtn02.nersc.gov:/project/projectdirs/"+\
                    "m958/netCDF.data/20CR_v%s/" % version
         remote_file="%s/first.guess.hourly/%s/%s.%04d.spread.nc" % (remote_dir,
@@ -115,8 +121,13 @@ def get_remote_file_name_scratch(variable,year,month,version,type):
                          year,month,variable)
             return(remote_file) 
 
-        if type=='first.guess':
+        if type=='first.guess.mean':
             remote_file="%s/first.guess.hourly/%04d/%02d/%s.nc" % (remote_dir,
+                         year,month,variable)
+            return(remote_file) 
+
+        if type=='first.guess.spread':
+            remote_file="%s/first.guess.hourly/%04d/%02d/%s.spread.nc" % (remote_dir,
                          year,month,variable)
             return(remote_file) 
 
@@ -134,8 +145,13 @@ def get_remote_file_name_scratch(variable,year,month,version,type):
                          variable,variable,year)
             return(remote_file)
  
-        if type=='first.guess':
+        if type=='first.guess.mean':
             remote_file="%s/first.guess.hourly/%s/%s.%04d.nc" % (remote_dir,
+                         variable,variable,year)
+            return(remote_file) 
+ 
+        if type=='first.guess.spread':
+            remote_file="%s/first.guess.hourly/%s/%s.%04d.spread.nc" % (remote_dir,
                          variable,variable,year)
             return(remote_file) 
 
@@ -150,6 +166,7 @@ def get_remote_file_name_released(variable,year,month,version,type):
         return get_remote_file_name_m958(variable,year,month,
                                          version,type)
 
+    remote_file=None
     if type=='ensemble':
        remote_dir="pbrohan@dtn02.nersc.gov:/project/projectdirs/"+\
                   "20C_Reanalysis/www/20C_Reanalysis_ensemble"
