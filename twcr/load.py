@@ -36,86 +36,34 @@ def get_data_dir(version):
         return g
     raise IOError("No data found for version %s" % version)
 
-def get_data_file_name(variable,year,month,day,hour,version,
-                       type='ensemble'):
+def get_data_file_name(variable,year,month,day=None,hour=None,
+                       version='3.5.1',type='ensemble'):
     """Return the name of the file containing data for the
-       requested variabe, at the specified time, from the
+       requested variable, at the specified time, from the
        20CR version."""
-    if(version[0]=='4'):
-      return get_data_file_name_v3(variable,year,month,day,hour,
-                                   version,type)
-    else:
-      return get_data_file_name_v2(variable,year,month,day,hour,
-                                   version,type)
-
-def get_data_file_name_v3(variable,year,month,day,hour,version,
-                          type='ensemble'):
-    """Return the name of the file containing data for the
-       requested variabe, at the specified time, from the
-       20CR version. (Version 3+)"""
     base_dir=get_data_dir(version)
-    name=None
-    if type=='normal':
-        name="%s/normals/hourly/%02d/%s.nc" % (base_dir,
-                                         month,variable)
-    if type=='standard.deviation':
-        name="%s/standard.deviations/hourly/%02d/%s.nc" % (base_dir,
-                                                  month,variable)
-    if type == 'ensemble':
-        name="%s/hourly/%04d/%02d/%s.nc" % (base_dir,
-                                            year,month,
-                                            variable)
-    if type == 'first.guess':
-            name="%s/first.guess/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if type == 'mean':
-            name="%s/mean/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if type == 'spread':
-            name="%s/spread/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
     if variable == 'observations':
-        if hour%6!=0:
-            raise StandardError("Observation files only available every 6 hours")
-        name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
-            year,month,year,month,day,hour)
-
-    if name==None:
-       raise IOError("Unsupported type %s" % type)
-    return name
-
-def get_data_file_name_v2(variable,year,month,day,hour,version,
-                       type='ensemble'):
-    """Return the name of the file containing data for the
-       requested variabe, at the specified time, from the
-       20CR version. (Version 2 series)"""
-    base_dir=get_data_dir(version)
-    name=None
-    if type=='normal':
-        name="%s/hourly/normals/%s.nc" % (base_dir,variable)
-    if type=='standard.deviation':
-        name="%s/hourly/standard.deviations/%s.nc" % (base_dir,
-                                                      variable)
-    if type == 'ensemble':
-            name="%s/ensembles/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if type == 'first.guess':
-            name="%s/first.guess/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if type == 'mean':
-            name="%s/mean/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if type == 'spread':
-            name="%s/spread/hourly/%04d/%s.nc" % (base_dir,
-                                                     year,variable)
-    if variable == 'observations':
+        if (day is None or hour is None):
+            raise StandardError("Observation files names need day and hour")
         if hour%6!=0:
             raise StandardError("Observation files only available every 6 hours")
         name="%s/observations/%04d/prepbufrobs_assim_%04d%02d%02d%02d.txt" % (base_dir,
             year,year,month,day,hour)
-    if name==None:
-       raise IOError("Unsupported type %s" % type)
-    return name
+        if version[0]=='4':
+            name="%s/observations/%04d/%02d/psobfile_%04d%02d%02d%02d" % (base_dir,
+                  year,month,year,month,day,hour)
+        return name    
+    if type in ('mean','spread','ensemble','normal',
+                   'standard.deviation','first.guess.mean',
+                   'first.guess.spread'):
+        name="%s/%s" % (base_dir,type)
+        if (type != 'normal' and type !='standard.deviation'):
+            name="%s/%04d" % (name,year)
+        if version[0]=='4':
+            name="%s/%02d" % (name,month)
+        name="%s/%s.nc" % (name,variable)
+        return name
+    raise StandardError("Unsupported type %s" % type)
 
 def is_in_file(variable,version,hour):
     """Is the variable available for this time?
