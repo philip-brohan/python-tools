@@ -32,22 +32,22 @@ def validate_dataset_name(dataset_name):
 def is_file_for(dataset_name, year, month, day, hour, realization, forecast_period):
     """Is there a dump file for this set of data?"""
     dataset_name = validate_dataset_name(dataset_name)
-    if dataset_name == 'mogreps-g'):
+    if dataset_name == 'mogreps-g':
         if hour%6 != 0 or hour < 0 or hour > 18:
             return False
-        if realisation < 0 or realisation > 11:
+        if realization < 0 or realization > 11:
             return False
-        if forecast_period%3 != 0 or forecast_period < 3 or 
-                                     forecast_period > 174:
+        if (forecast_period%3 != 0 or forecast_period < 3 or
+                                      forecast_period > 174):
             return False
         return True
-    if dataset_name == 'mogreps-uk'):
+    if dataset_name == 'mogreps-uk':
         if hour%6 != 3 or hour < 3 or hour > 21:
             return False
-        if realisation < 0 or realisation > 22:
+        if realization < 0 or realization > 22:
             return False
-        if forecast_period%3 != 0 or forecast_period < 3 or 
-                                     forecast_period > 36:
+        if (forecast_period%3 != 0 or forecast_period < 3 or 
+                                      forecast_period > 36):
             return False
         return True
     raise StandardError("Unsupported dataset %s. " % dataset_name +
