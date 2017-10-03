@@ -18,7 +18,6 @@ by date and (20CR) variable name.
 See http://data.informaticslab.co.uk/ - some of this code is taken from there.
 """
 
-import urllib2
 import os
 
 def validate_dataset_name(dataset_name):
@@ -51,12 +50,12 @@ def is_file_for(dataset_name, year, month, day, hour, realization, forecast_peri
             return False
         return True
     raise StandardError("Unsupported dataset %s. " % dataset_name +
-                        "Must be 'mogreps-g or mogreps-uk")
+                        "Must be mogreps-g or mogreps-uk")
 
 def make_local_file_name(dataset_name, year, month, day, hour, realization, forecast_period):
     dataset_name = validate_dataset_name(dataset_name)
     template_string = "{}/{}/{:04d}/{:02d}/{:02d}/{:02d}/"
-    if os.environ['SCRATCH'] is None:
+    if os.getenv('SCRATCH') is None:
         raise StandardError("SCRATCH environment variable is not defined")
     file_name = template_string.format(os.environ['SCRATCH'],dataset_name,
                                        year, month, day, hour)
@@ -83,12 +82,15 @@ def fetch_data(dataset_name, year, month, day, hour, realization, forecast_perio
     local_file_name = make_local_file_name(dataset_name, year, month, day, hour,
                                            realization, forecast_period)
     if os.path.isfile(local_file_name):
-        return(True) # Already fetched
-    local_dir = os.path.dirnamename(local_file_name)
+        return('Already fetched') # Already fetched
+    local_dir = os.path.dirname(local_file_name)
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
     remote_url = make_remote_url(dataset_name, year, month, day, hour,
                                   realization, forecast_period)
-    urllib2.urlretrieve(remote_url,local_file_name)
+    # urllib.urlretrieve corrupted the file for some reason
+    # so use wget - I like the progress bar anyway.
+    os.system("wget -P %s %s" % (os.path.dirname(local_file_name),
+                                 remote_url))
 
 

@@ -16,6 +16,7 @@ Test cases for the mopd module.
 Run python on this file to run all the tests.
 """
 import mopd
+import os
 import unittest
 
 class TestUM(unittest.TestCase):
@@ -45,10 +46,44 @@ class TestUM(unittest.TestCase):
                                          2016,3,12,0,-1,3))
         self.assertFalse(mopd.is_file_for('mogreps-g',
                                          2016,3,12,0,12,3))
+        self.assertTrue(mopd.is_file_for('mogreps-uk',
+                                         2016,3,12,3,0,3))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                          2016,3,12,5,0,3))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                          2016,3,12,24,0,3))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                          2016,3,12,3,0,0))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                         2016,3,12,3,0,37))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                          2016,3,12,3,0,4))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                         2016,3,12,3,-1,3))
+        self.assertFalse(mopd.is_file_for('mogreps-uk',
+                                         2016,3,12,3,23,3))
         with self.assertRaises(StandardError):
             mopd.is_file_for('mogrepsg',
                               2016,3,12,0,0,0)
 
+    def test_make_local_file_name(self):
+        self.assertEqual(mopd.make_local_file_name('mogreps-g',
+                                         2016,3,12,0,0,3),
+         "%s/%s/%04d/%02d/%02d/%02d/prods_op_%s_%04d%02d%02d_%02d_%02d_%03d.nc" % 
+         (os.getenv('SCRATCH'),'mogreps-g',2016,3,12,0,'mogreps-g',2016,3,12,0,0,3))
+        sctmp = os.getenv('SCRATCH')
+        with self.assertRaises(StandardError):
+            sctmp = os.getenv('SCRATCH')
+            del os.environ['SCRATCH']
+            mopd.make_local_file_name('mogreps-g',
+                                      2016,3,12,0,0,3)
+        os.environ['SCRATCH']=sctmp
+
+    def test_make_remote_url(self):
+        self.assertEqual(mopd.make_remote_url('mogreps-g',
+                                         2016,3,12,0,0,3),
+         "https://s3.eu-west-2.amazonaws.com/%s/prods_op_%s_%04d%02d%02d_%02d_%02d_%03d.nc" % 
+         ('mogreps-g','mogreps-g',2016,3,12,0,0,3))
 
 if __name__ == '__main__':
     unittest.main()
