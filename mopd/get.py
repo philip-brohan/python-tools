@@ -20,6 +20,54 @@ See http://data.informaticslab.co.uk/ - some of this code is taken from there.
 
 import os
 
+def load(dataset_name, variable, 
+         year, month, day, hour,
+         realization, forecast_period,
+         auto_fetch=False):
+    """Load a field from the InformaticsLab MOGREPS data
+
+       'hour' and 'forecast_period are real variables, not
+       integers - will interpolate as necessary.
+
+       'variable' uses the 20CR naming scheme: 'air.2m', 'prmsl',
+          'prate', 'uwnd.10m', ...
+
+       If 'auto_fetch' is True, fetch files from AWS as needed, if False
+        throw an exception if they are not already on local disc"""
+
+    if(is_single_field(dataset_name, variable, 
+                       year, month, day, hour,
+                       realization, forecast_period)):
+        return load_single_field(dataset_name, variable, 
+                       year, month, day, hour,
+                       realization, forecast_period,auto_fetch)
+
+def load_single_field(dataset_name, variable, 
+                      year, month, day, hour,
+                      realization, forecast_period,
+                      auto_fetch=False):
+    """year, month, day, hour is the validity time of the field"""
+    vdate=datetime.datetime(year,month,day,hour)
+    fdate=vdate-datetime.timedelta(hours=forecast_period)
+    # Get the file with the data in
+
+
+def is_single_field(dataset_name, variable, 
+                    year, month, day, hour,
+                    realization, forecast_period):
+    """True if data requested is in file - false if interpolation
+       from multiple fields needed."""
+    dataset_name=validate_dataset_name(dataset_name)
+    if(validated_name == 'mogreps-g'):
+        if(hour%1==0 and forecast_period%1==0):
+            return True
+        return False
+    if(validated_name == 'mogreps-uk'):
+        if(hour%1==0 and forecast_period%1==0):
+            return True
+        return False
+    raise StandardError("Unsupported dataset %s. " % dataset_name)
+
 def validate_dataset_name(dataset_name):
     validated_name = dataset_name.lower()
     if(validated_name != 'mogreps-g' and
