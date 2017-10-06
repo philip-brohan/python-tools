@@ -11,20 +11,22 @@
 # GNU Lesser General Public License for more details.
 #
 """
-The functions in this module fetch Met Office public data from AWS and
-store it on $SCRATCH. And then support access to the data in those files
-by date and (20CR) variable name.
+The functions in this module access Met Office public data from the
+ informatics lab store on AWS. Uses $SCRATCH as a file cache.
 
-See http://data.informaticslab.co.uk/ - some of this code is taken from there.
+See http://data.informaticslab.co.uk/.
 """
 
 import os
+import datetime
 
 def load(dataset_name, variable, 
          year, month, day, hour,
          realization, forecast_period,
-         auto_fetch=False):
+         auto_fetch=True):
     """Load a field from the InformaticsLab MOGREPS data
+
+       year, month, day, hour is the validity time of the field
 
        'hour' and 'forecast_period are real variables, not
        integers - will interpolate as necessary.
@@ -32,7 +34,7 @@ def load(dataset_name, variable,
        'variable' uses the 20CR naming scheme: 'air.2m', 'prmsl',
           'prate', 'uwnd.10m', ...
 
-       If 'auto_fetch' is True, fetch files from AWS as needed, if False
+       If 'auto_fetch' is True, fetch files from AWS as needed, if False,
         throw an exception if they are not already on local disc"""
 
     if(is_single_field(dataset_name, variable, 
@@ -42,15 +44,53 @@ def load(dataset_name, variable,
                        year, month, day, hour,
                        realization, forecast_period,auto_fetch)
 
-def load_single_field(dataset_name, variable, 
+def load_simple(dataset_name, variable, 
                       year, month, day, hour,
                       realization, forecast_period,
                       auto_fetch=False):
-    """year, month, day, hour is the validity time of the field"""
+    """Load a field in the simple case where no interpolation
+        is necessary - where the data at the given validity time and
+        forecast period is on disc."""
     vdate=datetime.datetime(year,month,day,hour)
-    fdate=vdate-datetime.timedelta(hours=forecast_period)
+    fdate=get_forecast_date_from_validity_date(vdate,forecast_period)
     # Get the file with the data in
+    if not is_file_for(dataset_name,fdate.year,fdate.month,fdate.day,
+                       fdate.hour,realisation,forecast_period):
+        if auto_fetch:
+            fetch_data(dataset_name,fdate.year,fdate.month,fdate.day,
+                       fdate.hour,realisation,forecast_period)
+        else:
+            raise StandardError("No Data for %s, realisation %d, forecast %d" %
+                            (vdate, realization, forecast_period) + ' on disc.')
 
+def convert_variable_name(dataset_name,variable):
+    """Get variable name in the data files from 20CR name."""
+    variable=variable.lower()
+    if variable=='air.2m':
+        return 'air_temperature'
+    elif variable=='prmsl':
+        return 'air_pressure_at_sea_level'
+    elif variable=='prate':
+        if dataset_name=='mogreps-g':
+            return 'stratiform_rainfall_amount'
+        if dataset_name=='mogreps-uk':
+            return 'stratiform_rainfall_amount'
+    elif variable='uwnd.10m':
+        return 'x_wind   
+
+
+def get_forecast_date_from_validity_date(dataset_name,vdate,forecast_period):
+    fdate=vdate-datetime.timedelta(hours=forecast_period)
+    if(dataset_name=='mogreps-g'):
+        if(forecast_period%3 != 0):
+           fdate=fdate+datetime.timedelta(hours=forecast_period%3)
+        return fdate
+    if(dataset_name=='mogreps-uk'):
+        if(forecast_period%3 != 0):
+           fdate=fdate+datetime.timedelta(hours=forecast_period%3)
+        return fdate
+    raise StandardError("Unsupported dataset %s. " % dataset_name +
+                        "Must be 'mogreps-g or mogreps-uk")
 
 def is_single_field(dataset_name, variable, 
                     year, month, day, hour,
