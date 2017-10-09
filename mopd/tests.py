@@ -17,6 +17,7 @@ Run python on this file to run all the tests.
 """
 import mopd
 import os
+import datetime
 import unittest
 
 class TestUM(unittest.TestCase):
@@ -84,6 +85,31 @@ class TestUM(unittest.TestCase):
                                          2016,3,12,0,0,3),
          "https://s3.eu-west-2.amazonaws.com/%s/prods_op_%s_%04d%02d%02d_%02d_%02d_%03d.nc" % 
          ('mogreps-g','mogreps-g',2016,3,12,0,0,3))
+
+    def test_convert_variable_name(self):
+        self.assertEqual(mopd.convert_variable_name('mogreps-g','prmsl'),
+                         'air_pressure_at_sea_level')
+        self.assertEqual(mopd.convert_variable_name('mogreps-uk','uwnd.10m'),
+                         'x_wind_0')
+        with self.assertRaises(StandardError):
+             mopd.convert_variable_name('mogreps-g','mslp')
+
+    def test_get_forecast_date_from_validity_date(self):
+        vdate=datetime.datetime(2016,3,12,7)
+        self.assertEqual(mopd.get_forecast_date_from_validity_date('mogreps-g',vdate,3),            
+                                                   datetime.datetime(2016,3,12,3)),
+        self.assertEqual(mopd.get_forecast_date_from_validity_date('mogreps-g',vdate,3.25),            
+                                                   datetime.datetime(2016,3,12,3)),
+        self.assertEqual(mopd.get_forecast_date_from_validity_date('mogreps-uk',vdate,3.25),            
+                                                   datetime.datetime(2016,3,12,3)),
+        with self.assertRaises(StandardError):
+             mopd.get_forecast_date_from_validity_date('mogreps-g',vdate,1)
+        with self.assertRaises(StandardError):
+             mopd.get_forecast_date_from_validity_date('mogreps-g',vdate,180)
+        with self.assertRaises(StandardError):
+             mopd.get_forecast_date_from_validity_date('mogreps-uk',vdate,38)
+        with self.assertRaises(StandardError):
+             mopd.get_forecast_date_from_validity_date('mogreps-w',vdate,3)
 
 if __name__ == '__main__':
     unittest.main()

@@ -19,6 +19,30 @@ See http://data.informaticslab.co.uk/.
 
 import os
 import datetime
+import iris
+import iris.time
+
+# Eliminate incomprehensible warning message
+iris.FUTURE.netcdf_promote='True'
+
+# Map 20CR names to file variable names
+Names={'mogreps-g': {
+                     'prmsl'    : 'air_pressure_at_sea_level',
+                     'air.2m'   : 'air_temperature_0',
+                     'prate'    : 'stratiform_rainfall_rate',
+                     'uwnd.10m' : 'x_wind_0',
+                     'vwnd.10m' : 'y_wind_0'
+                    },
+       'mogreps-uk': {
+                     'prmsl'    : 'air_pressure_at_sea_level',
+                     'air.2m'   : 'air_temperature_1',
+                     # No precip variable - use sum of rain and snow
+                     'rain'     : 'stratiform_rainfall_rate',
+                     'snow'     : 'stratiform_snowfall_rate',
+                     'uwnd.10m' : 'x_wind_0',
+                     'vwnd.10m' : 'y_wind_0'
+                    }
+}
 
 def load(dataset_name, variable, 
          year, month, day, hour,
@@ -37,12 +61,15 @@ def load(dataset_name, variable,
        If 'auto_fetch' is True, fetch files from AWS as needed, if False,
         throw an exception if they are not already on local disc"""
 
-    if(is_single_field(dataset_name, variable, 
-                       year, month, day, hour,
-                       realization, forecast_period)):
-        return load_single_field(dataset_name, variable, 
-                       year, month, day, hour,
-                       realization, forecast_period,auto_fetch)
+def datetime_to_float(dataset_name,dt):
+    """I'm having trouble with iris's date-selection methods.
+       So take advantage of the fact that all the MOGREPS nc files
+       have time stored as 'hours since 1970-01-01' and do
+       my own conversion."""
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    result = (dt - epoch).total_seconds()/3600
+    # That should be 'hours since epoch'
+    return result
 
 def load_simple(dataset_name, variable, 
                       year, month, day, hour,
@@ -51,43 +78,62 @@ def load_simple(dataset_name, variable,
     """Load a field in the simple case where no interpolation
         is necessary - where the data at the given validity time and
         forecast period is on disc."""
-    vdate=datetime.datetime(year,month,day,hour)
-    fdate=get_forecast_date_from_validity_date(vdate,forecast_period)
+    ihour=int(hour)
+    iminute=int((hour%1)*60)
+    vdate=datetime.datetime(year,month,day,ihour,iminute)
+    fdate=get_forecast_date_from_validity_date(dataset_name,vdate,forecast_period)
     # Get the file with the data in
     if not is_file_for(dataset_name,fdate.year,fdate.month,fdate.day,
-                       fdate.hour,realisation,forecast_period):
+                       fdate.hour,realization,forecast_period):
+        raise StandardError("Bad date for load_simple, data not on disc")
+    file_name=make_local_file_name(dataset_name, fdate.year, fdate.month, 
+                                   fdate.day, fdate.hour,
+                                   realization, forecast_period)
+    # Check file containing data on disc
+    if not os.path.isfile(file_name):
         if auto_fetch:
             fetch_data(dataset_name,fdate.year,fdate.month,fdate.day,
-                       fdate.hour,realisation,forecast_period)
+                       fdate.hour,realization,forecast_period)
         else:
             raise StandardError("No Data for %s, realisation %d, forecast %d" %
                             (vdate, realization, forecast_period) + ' on disc.')
-
+    # Get the field from the file - want one within 2 minutes
+    def approx_time(t):
+        if abs(t.point-datetime_to_float(dataset_name,vdate))<0.05:
+            return True
+        return False
+    time_constraint=iris.Constraint(time_0=approx_time)
+    variable_constraint=iris.Constraint(name=convert_variable_name(dataset_name,
+                                                                   variable))
+    hslice=iris.load_cube(file_name,
+                          time_constraint & variable_constraint)
+    return hslice
+     
 def convert_variable_name(dataset_name,variable):
     """Get variable name in the data files from 20CR name."""
+    dataset_name=validate_dataset_name(dataset_name)
     variable=variable.lower()
-    if variable=='air.2m':
-        return 'air_temperature'
-    elif variable=='prmsl':
-        return 'air_pressure_at_sea_level'
-    elif variable=='prate':
-        if dataset_name=='mogreps-g':
-            return 'stratiform_rainfall_amount'
-        if dataset_name=='mogreps-uk':
-            return 'stratiform_rainfall_amount'
-    elif variable='uwnd.10m':
-        return 'x_wind   
-
+    if variable in Names[dataset_name]:
+        return Names[dataset_name][variable]
+    raise StandardError("No variable %s, in dataset %s" %
+                            (variable, dataset_name))
 
 def get_forecast_date_from_validity_date(dataset_name,vdate,forecast_period):
+    """vdate is a datetime, forecast_period is in hours"""
+    if forecast_period%1 != 0:
+        forecast_period=int(forecast_period)+1
     fdate=vdate-datetime.timedelta(hours=forecast_period)
     if(dataset_name=='mogreps-g'):
-        if(forecast_period%3 != 0):
-           fdate=fdate+datetime.timedelta(hours=forecast_period%3)
+        if(forecast_period < 3 or forecast_period > 174):
+           raise StandardError("Forecast_period outside mogreps-g range of 3-174")
+        if(fdate.hour%3 != 0):
+           fdate=fdate-datetime.timedelta(hours=fdate.hour%3)
         return fdate
     if(dataset_name=='mogreps-uk'):
-        if(forecast_period%3 != 0):
-           fdate=fdate+datetime.timedelta(hours=forecast_period%3)
+        if(forecast_period < 3 or forecast_period > 6):
+           raise StandardError("Forecast_period outside mogreps-uk range of 3-36")
+        if(fdate.hour%3 != 0):
+           fdate=fdate+datetime.timedelta(hours=fdate.hour%3)
         return fdate
     raise StandardError("Unsupported dataset %s. " % dataset_name +
                         "Must be 'mogreps-g or mogreps-uk")
@@ -95,7 +141,7 @@ def get_forecast_date_from_validity_date(dataset_name,vdate,forecast_period):
 def is_single_field(dataset_name, variable, 
                     year, month, day, hour,
                     realization, forecast_period):
-    """True if data requested is in file - false if interpolation
+    """True if data requested is in one file - false if interpolation
        from multiple fields needed."""
     dataset_name=validate_dataset_name(dataset_name)
     if(validated_name == 'mogreps-g'):
