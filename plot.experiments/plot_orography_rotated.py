@@ -6,6 +6,9 @@ import os
 import numpy
 import matplotlib.pyplot
 
+# Remove incomprehensible error message
+iris.FUTURE.netcdf_promote=True
+
 # Load the orography cube
 orog=iris.load_cube("%s/orography/elev.0.25-deg.nc" %
                     os.environ['SCRATCH'])
@@ -21,13 +24,14 @@ orog.coord('latitude').coord_system=cs
 orog.coord('longitude').coord_system=cs
 
 # Make a dummy cube on a rotated grid
-cs=iris.coord_systems.RotatedGeogCS(45,160)
+cs=iris.coord_systems.RotatedGeogCS(0,60)
 lat_values=numpy.arange(90,-90,-0.35)
+lon_values=numpy.arange(-100,260,0.25)
 latitude = iris.coords.DimCoord(lat_values,
                                 standard_name='latitude',
                                 units='degrees_north',
                                 coord_system=cs)
-lon_values=numpy.arange(-130,230,0.25)
+lon_values=numpy.arange(-90,270,0.25)
 longitude = iris.coords.DimCoord(lon_values,
                                 standard_name='longitude',
                                 units='degrees_east',
