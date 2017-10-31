@@ -98,15 +98,8 @@ def load_simple(dataset_name, variable,
             raise StandardError("No Data for %s, realisation %d, forecast %d" %
                             (vdate, realization, forecast_period) + ' on disc.')
     # Get the field from the file - want one within 2 minutes
-    def approx_time(t):
-        if abs(t.point-datetime_to_float(dataset_name,vdate))<0.05:
-            return True
-        return False
-    time_constraint=iris.Constraint(time_0=approx_time)
-    variable_constraint=iris.Constraint(name=convert_variable_name(dataset_name,
-                                                                   variable))
-    hslice=iris.load_cube(file_name,
-                          time_constraint & variable_constraint)
+    hslice=load_specific(dataset_name,variable,file_name,
+                         year,month,day,ihour,iminute)
     return hslice
      
 def convert_variable_name(dataset_name,variable):
@@ -227,4 +220,44 @@ def fetch_data(dataset_name, year, month, day, hour, realization, forecast_perio
     os.system("wget -P %s %s" % (os.path.dirname(local_file_name),
                                  remote_url))
 
-
+def load_specific(dataset_name, variable, file_name, 
+                  year, month, day, hour, minute=0):
+    """Because of the irregular structure of the netCDF files,
+       and ther peculiarity of iris, loading is fiddly and requires 
+       variable-specific code."""
+    vdate=datetime.datetime(year,month,day,hour,minute)
+    if dataset_name == 'mogreps-g':
+        if variable=='prmsl':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-g',vdate))
+            variable_constraint=iris.Constraint(name='air_pressure_at_sea_level')
+            hslice=iris.load_cube(file_name,
+                          time_constraint & variable_constraint)
+            return hslice
+        if variable=='air.2m':
+            variable_constraint=iris.Constraint(name='air_temperature')
+            hslice=iris.load(file_name,variable_constraint)
+            return hslice[3]
+        if variable=='prate':
+            variable_constraint=iris.Constraint(name='stratiform_rainfall_amount')
+            h1=iris.load_cube(file_name,variable_constraint)
+            variable_constraint=iris.Constraint(name='stratiform_snowfall_amount')
+            h2=iris.load_cube(file_name,variable_constraint)
+            return iris.analysis.maths.add(h1,h2)
+        raise StandardError("Unsupported variable %s. " % variable)
+    if dataset_name == 'mogreps-uk':
+        if variable=='prmsl':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-uk',vdate))
+            variable_constraint=iris.Constraint(name='air_pressure_at_sea_level')
+            hslice=iris.load_cube(file_name,
+                          time_constraint & variable_constraint)
+            return hslice
+        if variable=='air.2m':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-uk',vdate))
+            variable_constraint=iris.Constraint(name='air_temperature')
+            hslice=iris.load(file_name,
+                                  time_constraint & variable_constraint)
+            return hslice[3]
+        raise StandardError("Unsupported variable %s. " % variable)
+    raise StandardError("Unsupported dataset %s. " % dataset_name +
+                        "Must be mogreps-g or mogreps-uk")
+    

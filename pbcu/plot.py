@@ -28,7 +28,7 @@ def pplot(cb):
     qplt.pcolormesh(cb)
 
     # Add coastlines.
-    plt.gca().coastlines()
+    plt.gca().coastlines('50m')
 
     # On screen
     plt.show()
