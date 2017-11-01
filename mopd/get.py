@@ -21,6 +21,7 @@ import os
 import datetime
 import iris
 import iris.time
+import re
 
 # Eliminate incomprehensible warning message
 iris.FUTURE.netcdf_promote='True'
@@ -223,20 +224,33 @@ def fetch_data(dataset_name, year, month, day, hour, realization, forecast_perio
 def load_specific(dataset_name, variable, file_name, 
                   year, month, day, hour, minute=0):
     """Because of the irregular structure of the netCDF files,
-       and ther peculiarity of iris, loading is fiddly and requires 
+       and the peculiarity of iris, loading is fiddly and requires 
        variable-specific code."""
     vdate=datetime.datetime(year,month,day,hour,minute)
     if dataset_name == 'mogreps-g':
         if variable=='prmsl':
-            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-g',vdate))
-            variable_constraint=iris.Constraint(name='air_pressure_at_sea_level')
-            hslice=iris.load_cube(file_name,
-                          time_constraint & variable_constraint)
-            return hslice
+            if re.search('03.nc',file_name)!=None: # 3-hour data includes multiple times
+                time_constraint=iris.Constraint(time=datetime_to_float('mogreps-g',vdate))
+                variable_constraint=iris.Constraint(name='air_pressure_at_sea_level')
+                hslice=iris.load_cube(file_name,
+                              time_constraint & variable_constraint)
+                return hslice
+            else:
+                variable_constraint=iris.Constraint(name='air_pressure_at_sea_level')
+                hslice=iris.load_cube(file_name,variable_constraint)
+                return hslice    
         if variable=='air.2m':
             variable_constraint=iris.Constraint(name='air_temperature')
             hslice=iris.load(file_name,variable_constraint)
             return hslice[3]
+        if variable=='uwnd.10m':
+            variable_constraint=iris.Constraint(name='x_wind')
+            hslice=iris.load(file_name,variable_constraint)
+            return hslice[2]
+        if variable=='vwnd.10m':
+            variable_constraint=iris.Constraint(name='y_wind')
+            hslice=iris.load(file_name,variable_constraint)
+            return hslice[2]
         if variable=='prate':
             variable_constraint=iris.Constraint(name='stratiform_rainfall_amount')
             h1=iris.load_cube(file_name,variable_constraint)
@@ -257,6 +271,25 @@ def load_specific(dataset_name, variable, file_name,
             hslice=iris.load(file_name,
                                   time_constraint & variable_constraint)
             return hslice[3]
+        if variable=='uwnd.10m':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-uk',vdate))
+            variable_constraint=iris.Constraint(name='x_wind')
+            hslice=iris.load(file_name,
+                                  time_constraint & variable_constraint)
+            return hslice[2]
+        if variable=='vwnd.10m':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-uk',vdate))
+            variable_constraint=iris.Constraint(name='y_wind')
+            hslice=iris.load(file_name,
+                                  time_constraint & variable_constraint)
+            return hslice[2]
+        if variable=='prate':
+            time_constraint=iris.Constraint(time=datetime_to_float('mogreps-uk',vdate))
+            variable_constraint=iris.Constraint(name='stratiform_rainfall_rate')
+            h1=iris.load_cube(file_name,time_constraint & variable_constraint)
+            variable_constraint=iris.Constraint(name='stratiform_snowfall_rate')
+            h2=iris.load_cube(file_name,time_constraint & variable_constraint)
+            return iris.analysis.maths.add(h1,h2)
         raise StandardError("Unsupported variable %s. " % variable)
     raise StandardError("Unsupported dataset %s. " % dataset_name +
                         "Must be mogreps-g or mogreps-uk")
