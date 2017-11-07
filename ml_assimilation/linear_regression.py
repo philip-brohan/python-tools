@@ -33,15 +33,21 @@ ax = matplotlib.pyplot.axes(projection=projection)
 ax.set_extent([-8/math.sqrt(2)-1.5,8/math.sqrt(2)-1.5,-6,10], crs=projection)
 
 # Set the background colour
-#ax.set_facecolor(0.78,0.78,0.78,1)
+ax.set_facecolor((0.78,0.78,0.78,1))
 
 # Add a lat lon grid
-ax.gridlines(linestyle='-',linewidth=1,color=(0,0.50,0.3),zorder=0)
+gl_minor=ax.gridlines(linestyle='-',linewidth=0.2,color=(0,0.50,0,0.3),zorder=0)
+gl_minor.xlocator = matplotlib.ticker.FixedLocator(numpy.arange(-20,20,0.5))
+gl_minor.ylocator = matplotlib.ticker.FixedLocator(numpy.arange(20,80,0.5))
+gl_major=ax.gridlines(linestyle='-',linewidth=1,color=(0,0.50,0,0.3),zorder=1)
+gl_major.xlocator = matplotlib.ticker.FixedLocator(numpy.arange(-20,20,2))
+gl_major.ylocator = matplotlib.ticker.FixedLocator(numpy.arange(20,80,2))
 
 # Plot the land
 ax.add_feature(cartopy.feature.NaturalEarthFeature('physical', 'land', '10m'), 
                edgecolor=(0.59,0.59,0.59,0),
-               facecolor=(0.59,0.59,0.59,1))
+               facecolor=(0.59,0.59,0.59,1),
+               zorder=2)
 
 
 # Make a dummy cube to use as a plot grid

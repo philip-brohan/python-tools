@@ -26,7 +26,6 @@ orog.coord('longitude').coord_system=cs
 # Make a dummy cube on a rotated grid
 cs=iris.coord_systems.RotatedGeogCS(0,60)
 lat_values=numpy.arange(90,-90,-0.35)
-lon_values=numpy.arange(-100,260,0.25)
 latitude = iris.coords.DimCoord(lat_values,
                                 standard_name='latitude',
                                 units='degrees_north',
